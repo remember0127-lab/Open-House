@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Open House Guestbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  :root{
+    --paper:#FAF7F1;
+    --paper-deep:#F1EBDF;
+    --ink:#1E2A24;
+    --ink-soft:#4A564F;
+    --green:#33473C;
+    --gold:#B8935A;
+    --gold-soft:#DCC59A;
+    --line:#DDD3C0;
+    --white:#FFFFFF;
+    --danger:#9B4A3F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    background:var(--paper);
+  }
+  #app{min-height:100vh;}
+  .hidden{display:none !important;}
+
+  /* --- loading --- */
+  .center-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:var(--green);
+  }
+  .loading-tag{
+    color:var(--gold-soft);
+    font-family:'Fraunces',serif;
+    font-size:18px;
+    letter-spacing:1px;
+  }
+
+  /* --- shared card / form elements --- */
+  .card{
+    background:var(--paper);
+    border-radius:4px;
+    padding:36px 32px;
+    max-width:420px;
+    width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,0.35);
+  }
+  .brand-row{display:flex;align-items:center;gap:8px;margin-bottom:18px;}
+  .brand-label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--gold);}
+  h1.setup-title{font-family:'Fraunces',serif;font-size:26px;font-weight:500;margin:0 0 6px 0;}
+  p.setup-sub{font-size:14px;color:var(--ink-soft);margin:0 0 22px 0;}
+  label.field-label{display:block;font-size:11px;font-weight:600;letter-spacing:0.5px;color:var(--ink-soft);margin-bottom:6px;text-transform:uppercase;}
+  input,select,textarea{
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:11px 12px;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    background:var(--white);
+    margin-bottom:16px;
+    outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+  textarea{min-height:70px;resize:vertical;}
+  .btn-primary{
+    width:100%;
+    background:var(--green);
+    color:var(--paper);
+    border:none;
+    border-radius:3px;
+    padding:13px 16px;
+    font-size:15px;
+    font-weight:600;
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-top:4px;
+  }
+  .btn-primary:hover{opacity:0.92;}
+  .btn-primary:disabled{opacity:0.6;cursor:default;}
+
+  /* --- kiosk --- */
+  .kiosk-wrap{
+    min-height:100vh;
+    background:linear-gradient(180deg, var(--paper-deep) 0%, var(--paper) 220px);
+    padding:28px 16px 60px;
+    position:relative;
+  }
+  .gear-btn{
+    position:absolute;
+    top:18px;
+    right:18px;
+    background:transparent;
+    border:1px solid var(--line);
+    border-radius:50%;
+    width:34px;
+    height:34px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:16px;
+  }
+  .kiosk-inner{max-width:640px;margin:0 auto;}
+  .ribbon{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:var(--green);
+    color:var(--paper);
+    padding:6px 14px;
+    border-radius:3px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:2px;
+    margin-bottom:16px;
+  }
+  .property-address{
+    font-family:'Fraunces',serif;
+    font-size:34px;
+    font-weight:500;
+    margin:0 0 4px 0;
+    line-height:1.15;
+  }
+  .hosted-by{font-size:14px;color:var(--ink-soft);margin:0 0 20px 0;}
+  .listing-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:20px 22px;
+    margin-bottom:20px;
+  }
+  .listing-meta{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
+  .listing-meta-item{font-size:13px;color:var(--ink-soft);}
+  .listing-meta-item b{color:var(--ink);font-family:'Fraunces',serif;font-size:15px;}
+  .listing-desc{font-size:14px;line-height:1.6;color:var(--ink);white-space:pre-wrap;}
+  .listing-link{display:inline-block;margin-top:10px;font-size:13px;color:var(--green);font-weight:600;text-decoration:none;}
+  .setup-card-wide{max-width:520px;}
+  .advanced-toggle{
+    display:flex;align-items:center;justify-content:space-between;
+    cursor:pointer;padding:12px 0;border-top:1px solid var(--line);
+    margin-top:6px;font-size:13px;font-weight:600;color:var(--ink-soft);
+  }
+  .advanced-section{padding-top:8px;}
+  .field-hint{font-size:12px;color:var(--ink-soft);margin:-10px 0 16px 0;}
+  .email-status{font-size:12px;margin-top:-8px;margin-bottom:10px;}
+  .email-status.ok{color:var(--green);}
+  .email-status.warn{color:var(--danger);}
+  .form-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:24px;
+  }
+  .field-row{display:flex;gap:16px;flex-wrap:wrap;}
+  .field{flex:1 1 220px;}
+  .success-box{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:48px 24px;
+    text-align:center;
+  }
+  .success-icon-wrap{
+    width:52px;height:52px;border-radius:50%;
+    background:var(--green);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 16px;
+    color:var(--white);
+    font-size:24px;
+  }
+  .success-title{font-family:'Fraunces',serif;font-size:22px;margin-bottom:6px;}
+  .success-sub{font-size:14px;color:var(--ink-soft);}
+
+  /* --- pin gate --- */
+  .pin-card{max-width:340px;text-align:center;}
+  .pin-title{font-family:'Fraunces',serif;font-size:22px;margin:10px 0 4px 0;}
+  .pin-error{color:var(--danger);font-size:13px;margin-top:-8px;margin-bottom:14px;}
+  .pin-input{text-align:center;letter-spacing:6px;font-size:22px;}
+  .back-link{
+    display:inline-flex;align-items:center;gap:4px;
+    background:transparent;border:none;color:var(--ink-soft);
+    font-size:13px;cursor:pointer;padding:0;margin-bottom:16px;
+  }
+
+  /* --- dashboard --- */
+  .dash-wrap{min-height:100vh;padding:24px 16px 60px;max-width:760px;margin:0 auto;}
+  .dash-title-row{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;}
+  .dash-title{font-family:'Fraunces',serif;font-size:26px;margin:0;}
+  .dash-sub{font-size:13px;color:var(--ink-soft);margin-top:4px;}
+  .export-btn{
+    display:flex;align-items:center;gap:6px;
+    background:var(--green);color:var(--paper);border:none;
+    border-radius:3px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .stat-row{display:flex;gap:12px;margin:18px 0;}
+  .stat-card{
+    flex:1;display:flex;align-items:center;gap:10px;
+    background:var(--white);border:1px solid var(--line);border-radius:5px;padding:12px 14px;
+  }
+  .stat-num{font-family:'Fraunces',serif;font-size:20px;line-height:1;}
+  .stat-label{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .search-wrap{
+    display:flex;align-items:center;gap:8px;
+    background:var(--white);border:1px solid var(--line);border-radius:4px;padding:9px 12px;
+  }
+  .search-input{border:none;outline:none;font-size:14px;flex:1;background:transparent;margin:0;padding:0;}
+  .clear-x{cursor:pointer;color:var(--ink-soft);font-size:14px;}
+  .list{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+  .empty-state{text-align:center;color:var(--ink-soft);font-size:14px;padding:40px 0;}
+  .visitor-card{display:flex;background:var(--white);border:1px solid var(--line);border-radius:5px;overflow:hidden;}
+  .tag-stub{width:5px;background:var(--gold);}
+  .visitor-main{padding:14px 16px;flex:1;}
+  .visitor-top-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .visitor-name{font-family:'Fraunces',serif;font-size:17px;font-weight:500;}
+  .visitor-time{font-size:11px;color:var(--ink-soft);}
+  .visitor-contact{font-size:13px;color:var(--ink-soft);margin-top:3px;}
+  .chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .chip{font-size:11px;background:var(--paper-deep);color:var(--ink);padding:3px 9px;border-radius:20px;}
+  .chip.highlight{background:#F1DDD6;color:var(--danger);}
+  .visitor-notes{font-size:13px;color:var(--ink-soft);margin-top:8px;font-style:italic;}
+
+  @media (max-width:480px){
+    .property-address{font-size:26px;}
+    .form-card{padding:18px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="center-screen" id="loadingScreen">
+    <div class="loading-tag">Opening the door…</div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "openhouse-data";
+
+function defaultData(){
+  return {
+    config: {
+      address:"", agentName:"", pin:"1234", configured:false,
+      description:"", price:"", beds:"", baths:"", listingUrl:"",
+      emailjsPublicKey:"", emailjsServiceId:"", emailjsTemplateId:""
+    },
+    visitors: []
+  };
+}
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultData();
+    return JSON.parse(raw);
+  }catch(e){
+    console.error("load failed", e);
+    return defaultData();
+  }
+}
+
+function saveData(data){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(e){
+    console.error("save failed", e);
+  }
+}
+
+let state = {
+  data: null,
+  view: "kiosk", // kiosk | pinGate | dashboard | setup
+  form: { name:"", email:"", phone:"", hasAgent:"", interest:"", timeframe:"", notes:"" },
+  submitted: false,
+  saving: false,
+  pinInput: "",
+  pinError: false,
+  search: "",
+  setupForm: {
+    address:"", agentName:"", pin:"",
+    description:"", price:"", beds:"", baths:"", listingUrl:"",
+    emailjsPublicKey:"", emailjsServiceId:"", emailjsTemplateId:""
+  },
+  setupAdvancedOpen: false
+};
+
+function init(){
+  state.data = loadData();
+  state.view = state.data.config.configured ? "kiosk" : "setup";
+  render();
+}
+
+function openSetupForEditing(){
+  const c = state.data.config;
+  state.setupForm = {
+    address: c.address || "", agentName: c.agentName || "", pin: c.pin || "",
+    description: c.description || "", price: c.price || "", beds: c.beds || "",
+    baths: c.baths || "", listingUrl: c.listingUrl || "",
+    emailjsPublicKey: c.emailjsPublicKey || "", emailjsServiceId: c.emailjsServiceId || "",
+    emailjsTemplateId: c.emailjsTemplateId || ""
+  };
+  state.setupAdvancedOpen = !!(c.emailjsPublicKey || c.emailjsServiceId || c.emailjsTemplateId);
+  state.view = "setup";
+  render();
+}
+
+function escapeHtml(str){
+  return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function render(){
+  const app = document.getElementById("app");
+  if(state.view === "setup") app.innerHTML = renderSetup();
+  else if(state.view === "kiosk") app.innerHTML = renderKiosk();
+  else if(state.view === "pinGate") app.innerHTML = renderPinGate();
+  else if(state.view === "dashboard") app.innerHTML = renderDashboard();
+  attachHandlers();
+}
+
+/* ---------- SETUP ---------- */
+function renderSetup(){
+  const f = state.setupForm;
+  const isEditing = state.data.config.configured;
+  const backLink = isEditing ? `<button class="back-link" id="su-back">‹ Back to dashboard</button>` : "";
+  const hasEmailKeys = f.emailjsPublicKey.trim() && f.emailjsServiceId.trim() && f.emailjsTemplateId.trim();
+
+  return `
+  <div class="center-screen" style="background:var(--green);">
+    <div class="card setup-card-wide">
+      ${backLink}
+      <div class="brand-row"><span>🏠</span><span class="brand-label">OPEN HOUSE GUESTBOOK</span></div>
+      <h1 class="setup-title">${isEditing ? "Listing & sign-in settings" : "Let's set up today's showing"}</h1>
+      <p class="setup-sub">This appears on the sign-in screen for your visitors.</p>
+
+      <label class="field-label">Property address</label>
+      <input id="su-address" placeholder="123 Maple Street" value="${escapeHtml(f.address)}">
+
+      <label class="field-label">Hosting agent</label>
+      <input id="su-agent" placeholder="Your name" value="${escapeHtml(f.agentName)}">
+
+      <label class="field-label">Dashboard PIN (4+ digits, for your eyes only)</label>
+      <input id="su-pin" placeholder="e.g. 4517" inputmode="numeric" value="${escapeHtml(f.pin)}">
+
+      <label class="field-label">Property description (shown to visitors)</label>
+      <textarea id="su-description" placeholder="Beautifully renovated 3-bed home with an open-concept kitchen, south-facing backyard, and a finished basement...">${escapeHtml(f.description)}</textarea>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Price</label>
+          <input id="su-price" placeholder="$899,000" value="${escapeHtml(f.price)}">
+        </div>
+        <div class="field">
+          <label class="field-label">Beds</label>
+          <input id="su-beds" placeholder="3" value="${escapeHtml(f.beds)}">
+        </div>
+        <div class="field">
+          <label class="field-label">Baths</label>
+          <input id="su-baths" placeholder="2" value="${escapeHtml(f.baths)}">
+        </div>
+      </div>
+
+      <label class="field-label">Full listing link (optional)</label>
+      <input id="su-listingUrl" placeholder="https://www.realtor.ca/..." value="${escapeHtml(f.listingUrl)}">
+
+      <div class="advanced-toggle" id="su-advanced-toggle">
+        <span>✉️ Auto-email the listing to visitors on sign-in (optional)</span>
+        <span>${state.setupAdvancedOpen ? "▲" : "▼"}</span>
+      </div>
+      ${state.setupAdvancedOpen ? `
+        <div class="advanced-section">
+          <p class="field-hint">Requires a free <a href="https://www.emailjs.com" target="_blank" rel="noopener">EmailJS</a> account connected to your own email. Create a template with variables: to_email, to_name, property_address, property_description, price, beds, baths, listing_url, agent_name — then paste your IDs below.</p>
+
+          <label class="field-label">EmailJS Public Key</label>
+          <input id="su-ejsPublic" placeholder="e.g. AbCdEfGhIjKlMnOp" value="${escapeHtml(f.emailjsPublicKey)}">
+
+          <label class="field-label">EmailJS Service ID</label>
+          <input id="su-ejsService" placeholder="e.g. service_abc123" value="${escapeHtml(f.emailjsServiceId)}">
+
+          <label class="field-label">EmailJS Template ID</label>
+          <input id="su-ejsTemplate" placeholder="e.g. template_xyz789" value="${escapeHtml(f.emailjsTemplateId)}">
+
+          ${hasEmailKeys
+            ? `<div class="email-status ok">✓ Auto-email is set up — visitors will get the listing after signing in.</div>`
+            : `<div class="email-status warn">Fill in all three fields to turn on auto-email.</div>`}
+        </div>
+      ` : ""}
+
+      <button class="btn-primary" id="su-save">${isEditing ? "Save changes" : "Open the guestbook →"}</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- KIOSK ---------- */
+function renderListingCard(cfg){
+  const hasAnything = cfg.description || cfg.price || cfg.beds || cfg.baths;
+  if(!hasAnything) return "";
+  const meta = [];
+  if(cfg.price) meta.push(`<div class="listing-meta-item"><b>${escapeHtml(cfg.price)}</b></div>`);
+  if(cfg.beds) meta.push(`<div class="listing-meta-item"><b>${escapeHtml(cfg.beds)}</b> beds</div>`);
+  if(cfg.baths) meta.push(`<div class="listing-meta-item"><b>${escapeHtml(cfg.baths)}</b> baths</div>`);
+  return `
+    <div class="listing-card">
+      ${meta.length ? `<div class="listing-meta">${meta.join("")}</div>` : ""}
+      ${cfg.description ? `<div class="listing-desc">${escapeHtml(cfg.description)}</div>` : ""}
+      ${cfg.listingUrl ? `<a class="listing-link" href="${escapeHtml(cfg.listingUrl)}" target="_blank" rel="noopener">View full listing →</a>` : ""}
+    </div>`;
+}
+
+function renderKiosk(){
+  const cfg = state.data.config;
+  const f = state.form;
+  const emailEnabled = !!(cfg.emailjsPublicKey && cfg.emailjsServiceId && cfg.emailjsTemplateId);
+
+  if(state.submitted){
+    return `
+    <div class="kiosk-wrap">
+      <button class="gear-btn" id="open-gate">⚙️</button>
+      <div class="kiosk-inner">
+        <div class="ribbon">🔑 WELCOME</div>
+        <h1 class="property-address">${escapeHtml(cfg.address)}</h1>
+        <p class="hosted-by">Hosted today by ${escapeHtml(cfg.agentName)}</p>
+        <div class="success-box">
+          <div class="success-icon-wrap">✓</div>
+          <div class="success-title">Thanks for stopping by, ${escapeHtml((f.name.split(" ")[0])||"there")}!</div>
+          <div class="success-sub">${emailEnabled ? "We've sent the listing details to your email." : "Have a look around — we're glad you're here."}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return `
+  <div class="kiosk-wrap">
+    <button class="gear-btn" id="open-gate">⚙️</button>
+    <div class="kiosk-inner">
+      <div class="ribbon">🔑 WELCOME</div>
+      <h1 class="property-address">${escapeHtml(cfg.address)}</h1>
+      <p class="hosted-by">Hosted today by ${escapeHtml(cfg.agentName)}</p>
+      ${renderListingCard(cfg)}
+
+      <form class="form-card" id="signin-form">
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Full name *</label>
+            <input id="f-name" required value="${escapeHtml(f.name)}" placeholder="Jane Rivera">
+          </div>
+          <div class="field">
+            <label class="field-label">Email *</label>
+            <input id="f-email" required type="email" value="${escapeHtml(f.email)}" placeholder="jane@email.com">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Phone</label>
+            <input id="f-phone" type="tel" value="${escapeHtml(f.phone)}" placeholder="(416) 555-0134">
+          </div>
+          <div class="field">
+            <label class="field-label">Already working with an agent?</label>
+            <select id="f-hasAgent">
+              <option value="" ${f.hasAgent===""?"selected":""}>Select one</option>
+              <option value="Yes" ${f.hasAgent==="Yes"?"selected":""}>Yes</option>
+              <option value="No" ${f.hasAgent==="No"?"selected":""}>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">I'm here because I'm...</label>
+            <select id="f-interest">
+              <option value="" ${f.interest===""?"selected":""}>Select one</option>
+              <option value="Buying" ${f.interest==="Buying"?"selected":""}>Looking to buy</option>
+              <option value="Selling" ${f.interest==="Selling"?"selected":""}>Curious what my home is worth</option>
+              <option value="Neighbor" ${f.interest==="Neighbor"?"selected":""}>A neighbor / just curious</option>
+              <option value="Browsing" ${f.interest==="Browsing"?"selected":""}>Just browsing</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Timeframe</label>
+            <select id="f-timeframe">
+              <option value="" ${f.timeframe===""?"selected":""}>Select one</option>
+              <option value="Immediately" ${f.timeframe==="Immediately"?"selected":""}>Ready now</option>
+              <option value="1-3 months" ${f.timeframe==="1-3 months"?"selected":""}>1–3 months</option>
+              <option value="3-6 months" ${f.timeframe==="3-6 months"?"selected":""}>3–6 months</option>
+              <option value="Just looking" ${f.timeframe==="Just looking"?"selected":""}>No rush</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Questions or comments</label>
+          <textarea id="f-notes" placeholder="Anything you'd like the agent to know">${escapeHtml(f.notes)}</textarea>
+        </div>
+
+        <button type="submit" class="btn-primary" id="signin-submit" ${state.saving?"disabled":""}>
+          ${state.saving?"Signing you in…":"Sign the guestbook →"}
+        </button>
+      </form>
+    </div>
+  </div>`;
+}
+
+/* ---------- PIN GATE ---------- */
+function renderPinGate(){
+  return `
+  <div class="center-screen" style="background:var(--green);">
+    <div class="card pin-card">
+      <button class="back-link" id="pin-back">‹ Back to sign-in</button>
+      <div style="font-size:26px;">🔒</div>
+      <h2 class="pin-title">Agent dashboard</h2>
+      <p class="setup-sub">Enter your PIN to view visitors.</p>
+      <input id="pin-input" class="pin-input" inputmode="numeric" value="${escapeHtml(state.pinInput)}" placeholder="••••" autofocus>
+      ${state.pinError ? `<div class="pin-error">That's not the right PIN. Try again.</div>` : ""}
+      <button class="btn-primary" id="pin-submit">Unlock →</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- DASHBOARD ---------- */
+function renderDashboard(){
+  const data = state.data;
+  const q = state.search.trim().toLowerCase();
+  const visitors = !q ? data.visitors : data.visitors.filter(v =>
+    v.name.toLowerCase().includes(q) ||
+    v.email.toLowerCase().includes(q) ||
+    (v.phone||"").toLowerCase().includes(q)
+  );
+  const total = data.visitors.length;
+  const needFollowUp = data.visitors.filter(v => v.hasAgent === "No").length;
+
+  const listHtml = visitors.length === 0
+    ? `<div class="empty-state">${total===0 ? "No one has signed in yet." : "No visitors match that search."}</div>`
+    : visitors.map(v => `
+      <div class="visitor-card">
+        <div class="tag-stub"></div>
+        <div class="visitor-main">
+          <div class="visitor-top-row">
+            <span class="visitor-name">${escapeHtml(v.name)}</span>
+            <span class="visitor-time">${new Date(v.time).toLocaleDateString()} ${new Date(v.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+          </div>
+          <div class="visitor-contact">${escapeHtml(v.email)}${v.phone ? " · "+escapeHtml(v.phone) : ""}</div>
+          <div class="chip-row">
+            ${v.interest ? `<span class="chip">${escapeHtml(v.interest)}</span>` : ""}
+            ${v.timeframe ? `<span class="chip">${escapeHtml(v.timeframe)}</span>` : ""}
+            ${v.hasAgent ? `<span class="chip ${v.hasAgent==="No"?"highlight":""}">${v.hasAgent==="No"?"No agent yet":"Has an agent"}</span>` : ""}
+          </div>
+          ${v.notes ? `<div class="visitor-notes">"${escapeHtml(v.notes)}"</div>` : ""}
+        </div>
+      </div>
+    `).join("");
+
+  return `
+  <div class="dash-wrap">
+    <button class="back-link" id="dash-back">‹ Back to sign-in</button>
+    <div class="dash-title-row">
+      <div>
+        <h1 class="dash-title">${escapeHtml(data.config.address)}</h1>
+        <div class="dash-sub">Hosted by ${escapeHtml(data.config.agentName)}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="export-btn" id="dash-edit" style="background:var(--white);color:var(--ink);border:1px solid var(--line);">✏️ Edit listing</button>
+        <button class="export-btn" id="dash-export">⬇ Export CSV</button>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <span>👥</span>
+        <div><div class="stat-num">${total}</div><div class="stat-label">Total visitors</div></div>
+      </div>
+      <div class="stat-card">
+        <span>🔑</span>
+        <div><div class="stat-num">${needFollowUp}</div><div class="stat-label">No agent yet — follow up</div></div>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <span>🔍</span>
+      <input class="search-input" id="dash-search" placeholder="Search by name, email, or phone" value="${escapeHtml(state.search)}">
+      ${state.search ? `<span class="clear-x" id="dash-clear">✕</span>` : ""}
+    </div>
+
+    <div class="list">${listHtml}</div>
+  </div>`;
+}
+
+/* ---------- HANDLERS ---------- */
+function attachHandlers(){
+  if(state.view === "setup"){
+    const f = state.setupForm;
+    const bind = (id, key, transform) => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener("input", (e) => {
+        f[key] = transform ? transform(e.target.value) : e.target.value;
+        if(transform) e.target.value = f[key];
+      });
+    };
+    bind("su-address","address");
+    bind("su-agent","agentName");
+    bind("su-pin","pin", v => v.replace(/\D/g,""));
+    bind("su-description","description");
+    bind("su-price","price");
+    bind("su-beds","beds");
+    bind("su-baths","baths");
+    bind("su-listingUrl","listingUrl");
+    bind("su-ejsPublic","emailjsPublicKey");
+    bind("su-ejsService","emailjsServiceId");
+    bind("su-ejsTemplate","emailjsTemplateId");
+
+    const advToggle = document.getElementById("su-advanced-toggle");
+    if(advToggle) advToggle.addEventListener("click", () => {
+      state.setupAdvancedOpen = !state.setupAdvancedOpen;
+      render();
+    });
+
+    const backBtn = document.getElementById("su-back");
+    if(backBtn) backBtn.addEventListener("click", () => {
+      state.view = "dashboard";
+      render();
+    });
+
+    document.getElementById("su-save").addEventListener("click", () => {
+      if(!f.address.trim() || !f.agentName.trim() || f.pin.trim().length < 4) return;
+      const wasConfigured = state.data.config.configured;
+      state.data.config = {
+        address: f.address.trim(),
+        agentName: f.agentName.trim(),
+        pin: f.pin.trim(),
+        configured: true,
+        description: f.description.trim(),
+        price: f.price.trim(),
+        beds: f.beds.trim(),
+        baths: f.baths.trim(),
+        listingUrl: f.listingUrl.trim(),
+        emailjsPublicKey: f.emailjsPublicKey.trim(),
+        emailjsServiceId: f.emailjsServiceId.trim(),
+        emailjsTemplateId: f.emailjsTemplateId.trim()
+      };
+      saveData(state.data);
+      state.view = wasConfigured ? "dashboard" : "kiosk";
+      render();
+    });
+  }
+
+  if(state.view === "kiosk"){
+    document.getElementById("open-gate").addEventListener("click", () => {
+      state.view = "pinGate";
+      render();
+    });
+
+    if(!state.submitted){
+      const formEl = document.getElementById("signin-form");
+      ["name","email","phone","notes"].forEach(k => {
+        document.getElementById("f-"+k).addEventListener("input", (e) => { state.form[k] = e.target.value; });
+      });
+      ["hasAgent","interest","timeframe"].forEach(k => {
+        document.getElementById("f-"+k).addEventListener("change", (e) => { state.form[k] = e.target.value; });
+      });
+      formEl.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if(!state.form.name.trim() || !state.form.email.trim()) return;
+        state.saving = true;
+        render();
+        const entry = { ...state.form, id: Date.now()+"-"+Math.random().toString(36).slice(2,7), time: new Date().toISOString() };
+        state.data.visitors = [entry, ...state.data.visitors];
+        saveData(state.data);
+        sendListingEmail(entry, state.data.config);
+        state.saving = false;
+        state.submitted = true;
+        render();
+        setTimeout(() => {
+          state.form = { name:"", email:"", phone:"", hasAgent:"", interest:"", timeframe:"", notes:"" };
+          state.submitted = false;
+          render();
+        }, 2200);
+      });
+    }
+  }
+
+  if(state.view === "pinGate"){
+    const input = document.getElementById("pin-input");
+    input.addEventListener("input", (e) => {
+      state.pinInput = e.target.value.replace(/\D/g, "");
+      e.target.value = state.pinInput;
+    });
+    input.addEventListener("keydown", (e) => { if(e.key === "Enter") tryPin(); });
+    document.getElementById("pin-submit").addEventListener("click", tryPin);
+    document.getElementById("pin-back").addEventListener("click", () => {
+      state.view = "kiosk";
+      state.pinInput = "";
+      state.pinError = false;
+      render();
+    });
+  }
+
+  if(state.view === "dashboard"){
+    document.getElementById("dash-back").addEventListener("click", () => {
+      state.view = "kiosk";
+      render();
+    });
+    document.getElementById("dash-export").addEventListener("click", exportCSV);
+    document.getElementById("dash-edit").addEventListener("click", openSetupForEditing);
+    document.getElementById("dash-search").addEventListener("input", (e) => {
+      state.search = e.target.value;
+      render();
+      document.getElementById("dash-search").focus();
+      document.getElementById("dash-search").setSelectionRange(state.search.length, state.search.length);
+    });
+    const clearBtn = document.getElementById("dash-clear");
+    if(clearBtn) clearBtn.addEventListener("click", () => { state.search = ""; render(); });
+  }
+}
+
+function tryPin(){
+  if(state.pinInput === state.data.config.pin){
+    state.view = "dashboard";
+    state.pinInput = "";
+    state.pinError = false;
+  }else{
+    state.pinError = true;
+    state.pinInput = "";
+  }
+  render();
+}
+
+function sendListingEmail(visitor, cfg){
+  if(!(cfg.emailjsPublicKey && cfg.emailjsServiceId && cfg.emailjsTemplateId)) return;
+  if(typeof emailjs === "undefined"){
+    console.error("EmailJS SDK failed to load — check your internet connection.");
+    return;
+  }
+  try{
+    emailjs.init({ publicKey: cfg.emailjsPublicKey });
+    emailjs.send(cfg.emailjsServiceId, cfg.emailjsTemplateId, {
+      to_email: visitor.email,
+      to_name: visitor.name,
+      property_address: cfg.address,
+      property_description: cfg.description,
+      price: cfg.price,
+      beds: cfg.beds,
+      baths: cfg.baths,
+      listing_url: cfg.listingUrl,
+      agent_name: cfg.agentName
+    }).then(() => {
+      console.log("Listing email sent to", visitor.email);
+    }).catch((err) => {
+      console.error("EmailJS send failed:", err);
+    });
+  }catch(err){
+    console.error("EmailJS error:", err);
+  }
+}
+
+function exportCSV(){
+  const rows = [
+    ["Name","Email","Phone","Working with agent","Interest","Timeframe","Notes","Signed in"],
+    ...state.data.visitors.map(v => [
+      v.name, v.email, v.phone, v.hasAgent, v.interest, v.timeframe,
+      (v.notes||"").replace(/\n/g," "), new Date(v.time).toLocaleString()
+    ])
+  ];
+  const csv = rows.map(r => r.map(cell => `"${String(cell??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `open-house-visitors-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+init();
+</script>
+</body>
+</html>
